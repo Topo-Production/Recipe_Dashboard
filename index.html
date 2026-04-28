@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Book & Meal Planner</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #fafaf7;
+  --card: #ffffff;
+  --border: #e5e5e0;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --accent: #c2410c;
+  --accent-light: #fff4ed;
+  --accent-soft: #fed7aa;
+  --green: #166534;
+  --green-light: #dcfce7;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.03);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.5; color: var(--text); background: var(--bg); }
+.app { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.title { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.subtitle { font-size: 13px; color: var(--muted); margin: 2px 0 0 0; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.tab { padding: 8px 16px; cursor: pointer; border: none; background: transparent; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: inherit; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tab:hover:not(.active) { color: var(--text); }
+.tab .badge { display: inline-block; background: var(--accent); color: white; font-size: 11px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; font-weight: 600; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.search { flex: 1; min-width: 180px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); font-size: 14px; font-family: inherit; }
+.search:focus { outline: none; border-color: var(--accent); }
+.btn { padding: 7px 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); cursor: pointer; font-size: 13px; font-family: inherit; color: var(--text); white-space: nowrap; }
+.btn:hover { background: var(--bg); border-color: #d0d0c8; }
+.btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+.btn-primary:hover { background: #9a3412; border-color: #9a3412; }
+.btn-ghost { background: transparent; border-color: transparent; }
+.btn-ghost:hover { background: var(--bg); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-danger { color: #b91c1c; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip { padding: 4px 12px; border: 1px solid var(--border); background: var(--card); border-radius: 999px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.chip.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: 600; }
+.chip:hover:not(.active) { background: var(--bg); color: var(--text); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: border-color .12s, transform .12s; box-shadow: var(--shadow); }
+.card:hover { border-color: var(--accent-soft); }
+.card-title { font-size: 15px; font-weight: 600; margin: 0 0 6px 0; line-height: 1.3; }
+.card-meta { font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+.tag { display: inline-block; padding: 2px 8px; background: var(--accent-light); color: var(--accent); border-radius: 4px; font-size: 11px; font-weight: 500; }
+.tag-method { background: #eff6ff; color: #1e40af; }
+.tag-row { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Week view */
+.week-controls { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; align-items: stretch; }
+@media (max-width: 880px) { .week-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .week-grid { grid-template-columns: 1fr; } }
+.day { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; min-height: 130px; display: flex; flex-direction: column; gap: 6px; }
+.day-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+.day-name { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.day-date { font-size: 11px; color: var(--muted); }
+.day-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.day-empty { display: flex; align-items: center; justify-content: center; flex: 1; border: 1px dashed var(--border); border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 12px; min-height: 60px; }
+.day-empty:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.day-add-more { display: block; text-align: center; padding: 6px; font-size: 11px; color: var(--muted); border: 1px dashed var(--border); border-radius: 5px; cursor: pointer; background: transparent; }
+.day-add-more:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+.day-recipe { background: var(--accent-light); border-radius: 6px; padding: 8px; position: relative; }
+.day-recipe-title { font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 3px; padding-right: 18px; }
+.day-recipe-meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.day-actions { display: flex; gap: 4px; }
+.day-action { flex: 1; font-size: 11px; padding: 3px 6px; border: 1px solid transparent; background: white; border-radius: 4px; cursor: pointer; color: var(--accent); font-family: inherit; }
+.day-action:hover { background: var(--accent); color: white; }
+.day-remove { position: absolute; top: 4px; right: 4px; cursor: pointer; color: var(--muted); font-size: 14px; line-height: 1; padding: 2px 6px; border-radius: 3px; background: transparent; border: none; }
+.day-remove:hover { color: #b91c1c; background: white; }
+
+/* Shopping list */
+.shop-empty { text-align: center; padding: 40px 20px; color: var(--muted); background: var(--card); border-radius: 8px; border: 1px dashed var(--border); }
+.shop-summary { background: var(--green-light); border: 1px solid #86efac; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.shop-stat { font-size: 13px; }
+.shop-stat strong { font-size: 18px; color: var(--green); display: block; }
+.shop-section { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+.shop-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.shop-section-title { font-size: 15px; font-weight: 600; margin: 0; }
+.shop-list { list-style: none; padding: 0; margin: 0; }
+.shop-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f3f3f0; }
+.shop-item:last-child { border-bottom: none; }
+.shop-item input[type="checkbox"] { margin-top: 3px; cursor: pointer; flex-shrink: 0; }
+.shop-item.checked { color: var(--muted); text-decoration: line-through; }
+.shop-item-content { flex: 1; min-width: 0; }
+.shop-item-line { font-weight: 500; }
+.shop-item-from { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.shop-item.checked .shop-item-from { color: #c0c0bc; }
+.shop-toggle { display: flex; gap: 4px; background: var(--bg); padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
+.shop-toggle button { padding: 4px 10px; border: none; background: transparent; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; color: var(--muted); }
+.shop-toggle button.active { background: var(--card); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.shop-section-day { font-size: 11px; color: var(--accent); font-weight: 600; text-transform: uppercase; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.modal { background: var(--card); border-radius: 10px; max-width: 640px; width: 100%; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; position: sticky; top: 0; background: var(--card); z-index: 1; }
+.modal-title { font-size: 18px; font-weight: 700; margin: 0; }
+.modal-close { background: transparent; border: none; font-size: 22px; cursor: pointer; color: var(--muted); padding: 0; line-height: 1; }
+.modal-body { padding: 16px 20px; }
+.modal-section { margin-bottom: 18px; }
+.modal-section-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px 0; }
+.modal-meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.ingredient-list { list-style: none; padding: 0; margin: 0; }
+.ingredient-list li { padding: 4px 0; font-size: 13px; }
+.instruction-list { padding-left: 18px; margin: 0; }
+.instruction-list li { padding: 4px 0; font-size: 13px; }
+.notes-banner { background: #fef3c7; color: #92400e; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; }
+.source-link { display: inline-block; font-size: 12px; color: var(--accent); text-decoration: none; margin-top: 4px; }
+.source-link:hover { text-decoration: underline; }
+
+/* Picker */
+.picker-list { display: flex; flex-direction: column; gap: 6px; }
+.picker-item { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: var(--card); }
+.picker-item:hover { background: var(--accent-light); border-color: var(--accent-soft); }
+.picker-item-title { font-size: 13px; font-weight: 500; }
+.picker-item-meta { font-size: 11px; color: var(--muted); }
+
+/* Export */
+.export-textarea { width: 100%; min-height: 240px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; resize: vertical; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--green); color: white; padding: 10px 18px; border-radius: 6px; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,.2); z-index: 200; animation: toastIn .2s ease-out; }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-state h3 { color: var(--text); font-weight: 600; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1 class="title">Recipe Book</h1>
+      <p class="subtitle">Plan your week, gather your shopping list, cook with confidence.</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="library">Library <span id="library-count" class="badge">29</span></button>
+    <button class="tab" data-tab="week">This Week <span id="week-count" class="badge" style="display:none"></span></button>
+    <button class="tab" data-tab="shopping">Shopping List</button>
+  </div>
+
+  <section id="tab-library">
+    <div class="toolbar">
+      <input type="text" class="search" id="search" placeholder="Search recipes by name, ingredient, or source...">
+    </div>
+    <div class="chips" id="category-chips"></div>
+    <div class="grid" id="recipe-grid"></div>
+  </section>
+
+  <section id="tab-week" style="display:none">
+    <div class="week-controls">
+      <button class="btn btn-primary" id="autofill-btn">Auto-fill empty days</button>
+      <button class="btn btn-danger" id="clear-week">Clear week</button>
+      <button class="btn btn-ghost" id="reroll-btn">Re-roll all days</button>
+      <span style="margin-left:auto; font-size:12px; color:var(--muted);" id="plan-status"></span>
+    </div>
+    <div class="week-grid" id="week-grid"></div>
+  </section>
+
+  <section id="tab-shopping" style="display:none">
+    <div id="shopping-content"></div>
+  </section>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+const RECIPES = [{"id":1,"title":"Chicken Tortilla Soup","source":"averiecooks.com","url":"https://www.averiecooks.com/easy-30-minute-homemade-chicken-tortilla-soup/","category":"Soup","cookMethod":["Stovetop"],"servings":"5","totalTime":"30 min","ingredients":["10 small corn tortillas, cut into 1/4-inch strips","2 tbsp olive oil (for tortilla strips)","1 tsp kosher salt (for tortilla strips)","2 tbsp olive oil","1 cup yellow onion, diced","1 large jalapeno pepper, diced","4 garlic cloves, minced","32 oz low-sodium chicken broth","Two 14.5 oz cans diced tomatoes with juice","One 15 oz can black beans, drained and rinsed","2 cups shredded cooked chicken","1 1/2 cups corn (frozen or canned)","1 tbsp lime juice","1 tbsp chili powder","2 tsp cumin","2 tsp salt","1 tsp black pepper","1 tsp smoked paprika","1/4 tsp cayenne (optional)","1/3 cup cilantro, minced","Avocado, shredded cheese, sour cream (for serving)"],"instructions":["Preheat oven to 375°F. Line a baking sheet with foil.","Toss tortilla strips with olive oil and salt. Bake 15-18 min until crisp.","Heat 2 tbsp olive oil in a Dutch oven over medium-high heat.","Sauté onion and jalapeño 5 min. Add garlic and cook 1-2 min.","Add chicken broth, tomatoes, black beans, chicken, corn, lime juice, and all spices. Bring to a boil.","Boil gently 5-7 min. Add water if soup is too thick.","Stir in cilantro, boil 1 more minute. Adjust salt to taste.","Ladle into bowls. Top with tortilla strips, avocado, cheese, sour cream."]},{"id":2,"title":"Instant Pot Cheater Lasagna","source":"365daysofcrockpot.com","url":"https://www.365daysofcrockpot.com/instant-pot-cheater-lasagna/","category":"Pasta","cookMethod":["Instant Pot"],"servings":"6","totalTime":"20 min","ingredients":["1 pound ground Italian sausage (mild or hot)","12 oz pasta (fusilli, bowties, rigatoni, or penne)","2 cups beef broth","1 (28 oz) can or jar spaghetti sauce","1 cup ricotta or cottage cheese","1 cup shredded mozzarella cheese"],"instructions":["Set Instant Pot to sauté. When display says HOT, add Italian sausage. Break it up and brown. Drain excess grease.","Dump pasta into the pot in an even layer. Cover pasta as best as possible with the broth.","Pour spaghetti sauce evenly over the top of the pasta. Don't stir.","Cover, secure lid, set valve to sealing. Pressure cook on Manual/high for 4 minutes (3 min for very thin pasta).","Move valve to venting. If foam escapes, switch back to sealing for 20 sec, then try again.","Remove lid. Stir in ricotta/cottage cheese and mozzarella. Serve with optional Parmesan."]},{"id":3,"title":"Instant Pot Chicken Taco Bowls","source":"tastesbetterfromscratch.com","url":"https://tastesbetterfromscratch.com/instant-pot-chicken-taco-bowls/","category":"Chicken","cookMethod":["Instant Pot"],"servings":"6","totalTime":"25 min","ingredients":["1 1/2 cups low-sodium chicken broth, divided","1 lb boneless skinless chicken breasts","1 packet taco seasoning","15 oz can black beans, rinsed and drained","1 cup corn","1 1/2 cups salsa","1 1/4 cups long grain white rice, rinsed and drained","Cheese, cilantro, avocado, green onion, sour cream (toppings)"],"instructions":["Spray bottom of Instant Pot with cooking spray. Add 1/2 cup broth.","Add chicken breasts, sprinkle with taco seasoning.","Add black beans, corn, then salsa. Add rice on top.","Pour remaining 1 cup broth in. Press rice into liquid to fully submerge.","Set valve to sealing. Cook on Manual high for 8 minutes.","Natural release 12 minutes, then quick release.","Remove lid. Gently fluff rice with a fork (don't stir). Replace lid (off) for 5 min.","Pull out chicken and shred. Serve in bowls with rice and toppings."]},{"id":4,"title":"Instant Pot 5-Ingredient Enchilada Chicken","source":"365daysofcrockpot.com","url":"https://www.365daysofcrockpot.com/instant-pot-5-ingredient-enchilada-chicken/","category":"Chicken","cookMethod":["Instant Pot"],"servings":"8","totalTime":"20 min","ingredients":["1/2 cup chicken broth (use 1/4 cup for frozen chicken)","2 1/2 lbs chicken breasts (frozen okay)","1 1/2 tsp cumin","1 1/2 tsp dried oregano","1 (10 oz) can red enchilada sauce","Optional: 2 tbsp cornstarch + 2 tbsp water"],"instructions":["Add broth to pot. Sprinkle chicken with cumin and oregano. Pour enchilada sauce over top.","Secure lid. Set valve to sealing. Pressure cook 15 min for frozen chicken or 12 min for thawed.","When time is up, let pot sit 5 minutes, then quick release.","Remove lid. Shred chicken on cutting board, then stir back into sauce.","To thicken: turn pot to sauté. Mix cornstarch with water until smooth, stir into pot until thickened.","Serve in tacos, nachos, quesadillas, burritos, or over rice."]},{"id":5,"title":"Perfect Baked Potato","source":"gimmesomeoven.com","url":"https://www.gimmesomeoven.com/baked-potato/","category":"Sides","cookMethod":["Oven"],"servings":"1 per potato","totalTime":"52 min","ingredients":["1 medium-to-large Russet potato, scrubbed","1-2 tsp melted butter (or olive oil)","Pinch of coarse kosher salt","Pinch of freshly-cracked black pepper"],"instructions":["Heat oven to 450°F. Line a baking sheet with foil; place wire rack on top if available.","Poke potato at least 10 times all over with a fork. Place on baking sheet.","Bake 25 minutes.","Remove from oven. Brush all sides with melted butter or oil. Sprinkle with kosher salt. Place back on sheet, opposite side up.","Bake another 20 minutes. Squeeze with oven mitt — soft means done. If not, continue in 5-min increments.","Slice halfway through lengthwise. Squeeze gently to open. Fluff insides with a fork.","Top and serve immediately."]},{"id":6,"title":"Soft Pumpkin Chocolate Chip Cookies","source":"afamilyfeast.com","url":"https://www.afamilyfeast.com/soft-pumpkin-chocolate-chip-cookies/","category":"Dessert","cookMethod":["Oven"],"servings":"3 dozen","totalTime":"31 min","ingredients":["1 cup pumpkin puree (not pie filling)","1 cup granulated sugar","1/2 cup oil (canola or vegetable)","1 tsp vanilla","1 large egg","2 cups flour","2 tsp baking powder","1 tsp cinnamon","1/2 tsp salt","1 tsp baking soda","1 tsp milk","1 cup semi-sweet chocolate chips","1 cup chopped walnuts (optional)"],"instructions":["Preheat oven to 375°F. Line cookie sheets with parchment paper.","In a stand mixer, combine pumpkin, sugar, oil, vanilla, and egg until well combined.","In a separate bowl, stir together flour, baking powder, cinnamon, and salt.","In a small bowl, dissolve baking soda in milk.","Add the dry mixture and the baking soda mixture to the pumpkin mixture. Mix well, but don't overwork.","Stir in chocolate chips and walnuts.","Drop 1 1/2 tbsp mounds of dough onto sheets.","Bake 10-12 minutes. Cool briefly, then transfer to wire rack."]},{"id":7,"title":"Smoked Picanha Steak","source":"smokedmeatsunday.com","url":"https://www.smokedmeatsunday.com/picanha-steak/","category":"Beef","cookMethod":["Smoker"],"servings":"4-6","totalTime":"3 hr 15 min","ingredients":["2-3 lb picanha steak (sirloin cap / culotte)","1 tbsp coarse kosher salt","3 tbsp BBQ rub (beef rub recommended)"],"instructions":["Place fat cap down on a sheet pan. Sprinkle meat with kosher salt.","Refrigerate uncovered for 90 minutes.","Remove. Cross-thatch the fat cap: parallel cuts ~1 inch apart, then perpendicular cuts (don't cut into meat).","Season generously with BBQ rub on both sides.","Set up smoker for indirect heat at 180°F (oak or mesquite). Place steak fat cap up.","Smoke until internal temperature reaches 110°F.","Remove and tent with foil. Increase smoker to 450°F.","Return steak to grill, cook until internal temp reaches 125°F (medium-rare).","Rest 15-20 minutes (temp will rise ~10°F).","Slice thin against the grain. Serve with chimichurri if desired."]},{"id":8,"title":"Air Fryer Chicken Thighs","source":"jenniferbanz.com","url":"https://jenniferbanz.com/air-fryer-chicken-thighs","category":"Chicken","cookMethod":["Air Fryer"],"servings":"4","totalTime":"27 min","ingredients":["4 bone-in, skin-on chicken thighs, trimmed","1/2 tsp kosher salt","1 tsp smoked paprika","1 tsp garlic powder","1/2 tsp oregano","1/2 tsp onion powder"],"instructions":["Preheat air fryer to 380°F for 5 minutes. Spray with cooking spray.","Pat chicken thighs dry. Add to a zip-top bag with all seasonings. Shake to coat.","Place chicken thighs skin side down in air fryer in a single layer. Cook at 380°F for 12 minutes.","Flip skin side up and cook another 10-15 minutes until skin is crispy.","Done when internal temperature reaches 165°F (up to 195°F for peak tenderness)."]},{"id":9,"title":"3-Ingredient Nutella Brownies","source":"yahoo.com","url":"https://www.yahoo.com/lifestyle/3-ingredient-nutella-brownies-way-100000436.html","category":"Dessert","cookMethod":["Oven"],"servings":"9","totalTime":"30 min","ingredients":["1 cup Nutella (or other chocolate hazelnut spread)","2 large eggs","1/2 cup all-purpose flour"],"instructions":["Preheat oven to 350°F. Line an 8x8 baking pan with parchment paper.","In a bowl, whisk Nutella and eggs until smooth.","Fold in flour until just combined.","Pour batter into pan and smooth the top.","Bake 20-25 minutes until a toothpick comes out with a few moist crumbs.","Cool completely before slicing into 9 squares."]},{"id":10,"title":"Smoked Al Pastor","source":"heygrillhey.com","url":"https://heygrillhey.com/smoked-al-pastor/","category":"Pork","cookMethod":["Smoker"],"servings":"8","totalTime":"10 hr 30 min","ingredients":["4 lbs boneless pork shoulder, sliced 1/4 inch thick","1 pineapple, cut into wedges (reserve top)","2 tbsp butter","1/4 cup white onion, diced","4 cloves garlic","1/2 cup chicken stock","2 dried ancho chile peppers","2 chipotle peppers in adobo sauce","1 1/2 tbsp achiote paste (or powder)","2 tsp cumin","2 tsp Mexican oregano","1 1/2 tbsp kosher salt","1 tbsp sugar","1/3 cup white vinegar","36 small street taco shells","1 cup fresh cilantro, chopped","1/2 cup red onion, diced","4 limes, cut into wedges"],"instructions":["Make marinade: Melt butter in a saucepan over medium heat. Sauté onion and garlic 2-3 min.","Add chicken stock, ancho peppers, and chipotle peppers with adobo. Bring to boil and cook 4-5 min.","Reduce heat. Stir in achiote paste, cumin, oregano, salt, sugar, and vinegar. Simmer 4-5 min.","Remove ancho stems. Transfer everything to a blender, blend until smooth. Cool to room temperature.","Pour marinade over sliced pork in a glass bowl or zip-top bag. Massage to coat. Refrigerate 4-24 hours.","Preheat smoker to 275°F using cherry, oak, maple, or apple wood.","Slide marinated pork onto a vertical skewer or rotisserie attachment, keeping edges uniform.","Smoke 4 hours, basting with drippings every 30 minutes (skip if rotisserie). Cook until internal temp reaches 145°F.","Place pineapple wedges on grill during last 30 min, flipping after 15.","Remove and chop pineapple. Slice meat from skewer with sharp knife in light sawing motion.","Serve in taco shells topped with cilantro, red onion, and lime."]},{"id":11,"title":"Smoked Coffee Rub Tri Tip","source":"heygrillhey.com","url":"https://heygrillhey.com/smoky-joe-tri-tip/","category":"Beef","cookMethod":["Smoker"],"servings":"3","totalTime":"3 hr 25 min","ingredients":["1 (2-3 lb) tri tip roast","1 tsp coarse sea salt","1 tsp instant coffee crystals","1 tsp garlic powder","1 tsp smoked paprika","1/2 tsp cracked black pepper","1/2 tsp whole coriander seeds, crushed","1/2 tsp onion powder","1/4 tsp cayenne pepper","1/4 tsp chili powder"],"instructions":["Preheat smoker to lowest setting (~175-180°F).","Combine all rub ingredients in a small bowl.","Trim excess fat off tri tip. Season liberally with the rub on all sides.","Place seasoned tri tip directly on grill grates. Smoke 3 hours or until internal temp is within 10°F of target (110°F rare, 120°F medium-rare, 130°F medium).","Remove tri tip. Place a cast iron skillet on grates and crank heat to highest setting (at least 400°F).","Sear tri tip in hot pan, 4-6 minutes per side. Pull at final temp (120°F rare, 130°F med-rare, 140°F medium).","Rest 10 minutes. Slice against the grain and serve."]},{"id":12,"title":"Easy Skillet Breakfast Potatoes","source":"littlespicejar.com","url":"https://littlespicejar.com/easy-skillet-breakfast-potatoes/","category":"Breakfast","cookMethod":["Stovetop"],"servings":"4","totalTime":"20 min","ingredients":["1 1/2 lbs russet potatoes","2 tbsp butter","2 tbsp olive oil","Pinch of cayenne","1/2 tsp garlic powder","1/2 tsp onion powder","1/4 tsp smoked paprika","Optional herbs: rosemary, thyme, smashed garlic clove","Salt and pepper to taste"],"instructions":["Peel and quarter the potatoes. Microwave covered for 3 1/2 to 4 1/2 minutes. Knife should pierce with some resistance. Cool to room temperature (or refrigerate to use next day).","Dice cooled potatoes into 1/2-inch pieces.","In a 12-inch skillet over medium-high heat, combine butter, olive oil, and (if using) rosemary, thyme, and smashed garlic. Heat until herbs sizzle; remove and discard herbs.","Add potatoes in single layer. Season with salt, pepper, cayenne, garlic powder, onion powder, smoked paprika. Toss to coat.","Cook 8-10 minutes total, flipping every 2-3 minutes for even browning.","Taste and adjust seasoning. Serve immediately."]},{"id":13,"title":"Jalapeño Ranch (Meat Church style)","source":"meatchurch.com","url":"https://www.meatchurch.com/blogs/recipes/jalapeno-ranch","category":"Sauce/Dip","cookMethod":["No-cook"],"servings":"About 2 cups","totalTime":"10 min","notes":"Original Meat Church recipe could not be retrieved — this is a standard interpretation. Verify quantities on the source site before serving.","ingredients":["1 cup mayonnaise","1 cup sour cream","1 packet ranch dressing/seasoning mix (1 oz)","2-3 jalapeños, seeded and roughly chopped (or 1 can pickled jalapeños with juice for tang)","1/2 cup fresh cilantro leaves","Juice of 1 lime","1 clove garlic","1/2 tsp Meat Church Holy Voodoo or other Cajun seasoning (optional)","Splash of buttermilk to thin (optional)"],"instructions":["Add all ingredients to a blender or food processor.","Blend until smooth and creamy.","Taste and adjust: more jalapeño for heat, more lime for brightness, buttermilk to thin.","Refrigerate at least 30 minutes before serving to let flavors meld.","Keeps in fridge up to 1 week."]},{"id":14,"title":"Grandma's White Chicken Chili","source":"meatchurch.com","url":"https://www.meatchurch.com/blogs/recipes/white-chicken-chili","category":"Chili","cookMethod":["Smoker","Slow Cooker"],"servings":"6-8","totalTime":"3-4 hr","ingredients":["3-4 cups cooked chicken, chopped (smoked chicken preferred)","1 large white or yellow onion, chopped","3 cans Great Northern beans","1 (32 oz) carton chicken broth","1 can Rotel diced tomatoes & green chilies","1 (10 oz) block pepper jack cheese, cubed","2 tsp cumin","2 tbsp Meat Church Texas Chili Seasoning","Garnish: shredded cheese, sour cream, cilantro"],"instructions":["(Optional) Season a chicken with The Gospel rub and smoke; pull and chop the meat. Or use rotisserie/canned chicken.","Mix all ingredients in a Dutch oven or slow cooker.","Smoker method: Prepare smoker at 225°F with hickory or pecan. Place Dutch oven uncovered in smoker. Cook 3-4 hours, stirring at least every hour. Cover and simmer to hold until ready to serve.","Slow cooker method: Cook on medium 3-4 hours (or higher if pressed for time, since ingredients are pre-cooked).","Top each serving with shredded cheese, fresh-cracked black pepper, cilantro, and a dollop of sour cream.","Great with cornbread or toasty baguettes."]},{"id":15,"title":"Texas Chili (Meat Church style)","source":"meatchurch.com","url":"https://www.meatchurch.com/blogs/recipes/texas-chili","category":"Chili","cookMethod":["Smoker","Stovetop"],"servings":"8","totalTime":"3-4 hr","notes":"Original Meat Church recipe could not be retrieved — this is a standard Texas-style chili interpretation. Verify on source site before serving.","ingredients":["3 lbs beef chuck, cut into 1/2-inch cubes","2 tbsp Meat Church Holy Cow rub (or beef rub)","2 tbsp olive oil or beef tallow","1 large onion, diced","1 jalapeño, diced","4 garlic cloves, minced","3 tbsp Meat Church Texas Chili Seasoning","2 tbsp tomato paste","1 (15 oz) can fire-roasted tomatoes","1 (12 oz) bottle of beer","2-3 cups beef broth","1 tbsp masa harina (to thicken)","Garnish: shredded cheddar, sour cream, diced onion, cilantro"],"instructions":["Season cubed beef with Holy Cow rub.","Heat oil in a Dutch oven over medium-high. Brown beef in batches; remove and set aside.","Add onion and jalapeño to the pot, cook 3-4 min until soft. Add garlic and cook 30 seconds.","Stir in tomato paste and Texas Chili Seasoning, cook 1 min until fragrant.","Return beef to pot. Add fire-roasted tomatoes, beer, and beef broth.","Smoker method: Cover and place in smoker at 275°F for 3 hours, stirring every 30-45 minutes.","Stovetop method: Bring to a simmer, cover, and cook on low 2-3 hours until beef is fork-tender.","Whisk masa harina with a few tablespoons of broth, stir in to thicken. Cook 10 more minutes.","Serve with classic chili toppings."]},{"id":16,"title":"Best Smoked Salmon on Pellet Grill","source":"windingcreekranch.org","url":"https://www.windingcreekranch.org/best-smoked-salmon-on-pellet-grill/","category":"Seafood","cookMethod":["Smoker"],"servings":"6","totalTime":"1 hr 5 min","ingredients":["2-3 lb salmon fillet (or individual fillets), skin on","1/2 tsp paprika (or smoked paprika)","1/2 tsp garlic powder","1/2 tsp sea salt","1/8 tsp black pepper","1 tsp brown sugar"],"instructions":["Preheat smoker to 300°F.","Combine paprika, garlic powder, salt, pepper, and brown sugar in a small bowl.","Pat salmon dry. Sprinkle spice rub evenly over the top.","Place salmon skin side down on grill grates. Insert temp probe into thickest part. Close lid.","Cook ~1 hour until internal temp reaches 145°F (thicker fillets take longer).","Carefully remove from grill, garnish with fresh dill or chives and lemon, and serve."]},{"id":17,"title":"Mississippi Pot Roast","source":"belleofthekitchen.com","url":"https://belleofthekitchen.com/mississippi-pot-roast/","category":"Beef","cookMethod":["Slow Cooker"],"servings":"8","totalTime":"8 hr 5 min","ingredients":["1 (3-4 lb) chuck roast","1 packet ranch dressing mix","1 packet au jus gravy mix","1/4 cup butter","4-5 pepperoncini peppers"],"instructions":["Place roast in slow cooker. Sprinkle ranch and au jus mixes over the top.","Place pepperoncini peppers on top of the mixes. Add butter.","Cover and cook on low for 8 hours. Do NOT add water — the roast makes its own liquid.","Optional: Add quartered russet potatoes and baby carrots in last 1-2 hours.","Serve over noodles, rice, or mashed potatoes."]},{"id":18,"title":"Ultimate Creamy Potato Soup","source":"sugarspunrun.com","url":"https://sugarspunrun.com/creamy-potato-soup-recipe/","category":"Soup","cookMethod":["Stovetop"],"servings":"8","totalTime":"30 min","ingredients":["6 strips (uncooked) bacon, cut into small pieces","3 tbsp butter (unsalted or salted)","1 medium yellow onion, chopped (~1.5 cup)","3 large garlic cloves, minced","1/3 cup all-purpose flour","2 1/2 lbs gold potatoes, peeled and diced into ~1\" pieces","4 cups chicken broth","2 cups milk","2/3 cup heavy cream","1 1/2 tsp salt (more to taste)","1 tsp ground pepper","1/4 - 1/2 tsp ancho chili powder","2/3 cup sour cream","Shredded cheddar, chives, additional sour cream and bacon (toppings)"],"instructions":["Cook bacon pieces in a Dutch oven over medium heat until crisp. Remove bacon, leave fat.","Add butter and onion. Cook 3-5 min until tender.","Add garlic, cook 30 seconds.","Sprinkle flour over and stir until smooth.","Add potatoes, chicken broth, milk, heavy cream, salt, pepper, and ancho chili powder. Stir well.","Bring to a boil; cook ~10 minutes until potatoes are fork-tender.","Reduce heat to simmer. Transfer half the soup to a blender, puree until smooth, return to pot. (Or use immersion blender on half.)","Stir in sour cream and reserved bacon.","Simmer 15 minutes before serving with toppings."]},{"id":19,"title":"Smoked Sous Vide Ribs","source":"saltpepperskillet.com","url":"https://saltpepperskillet.com/smoked-sous-vide-ribs/","category":"Pork","cookMethod":["Sous Vide","Smoker"],"servings":"3","totalTime":"25 hr 40 min","ingredients":["1 rack pork ribs (St. Louis or baby back)","1/4 tsp Diamond kosher salt per pound","1/2 cup dry rib rub","Applewood chunks or pellets","BBQ sauce (plus more for serving)"],"instructions":["Sous vide phase: Clean ribs, remove membranes, rinse with cold water. Season with salt and a light dust of rub (~1/8 cup).","Vacuum seal ribs.","Place in water bath at 148°F (64°C) for 24-30 hours. Cover bath to prevent evaporation.","Remove from bath, rest on counter 10-15 min, then ice bath 30 min until fully chilled.","Refrigerate up to 5 days until ready to smoke.","Smoke phase: Preheat smoker to 250°F for indirect heat with a water drip pan.","Remove ribs from bag (leave wet so rub sticks). Dust with 1/4 cup dry rub per rack.","Smoke 1 hour. Baste with BBQ sauce on both sides.","Cook 30 more minutes, applying sauce again after 15 minutes.","Serve immediately or wrap in butcher paper to hold."]},{"id":20,"title":"Slow Cooker Chicken Tikka Masala","source":"thekitchn.com","url":"https://www.thekitchn.com/recipe-slow-cooker-chicken-tikka-masala-recipes-from-the-kitchn-211284","category":"Chicken","cookMethod":["Slow Cooker"],"servings":"6-8","totalTime":"4-8 hr","notes":"Original Kitchn recipe could not be retrieved — this is a standard slow cooker tikka masala interpretation. Verify on source site before serving.","ingredients":["2 lbs boneless skinless chicken thighs, cut into chunks","1 large onion, diced","4 cloves garlic, minced","2 tbsp grated fresh ginger","1 (15 oz) can tomato sauce","1 (6 oz) can tomato paste","1 cup plain Greek yogurt","2 tbsp garam masala","2 tsp ground cumin","2 tsp paprika","1 tsp ground turmeric","1/2 tsp cayenne (or to taste)","1 1/2 tsp salt","1 cup heavy cream","Cilantro, basmati rice, naan (for serving)"],"instructions":["Place chicken, onion, garlic, ginger, tomato sauce, tomato paste, yogurt, and all spices in slow cooker. Stir to combine.","Cook on LOW 6-8 hours or HIGH 3-4 hours.","Stir in heavy cream during the last 30 minutes.","Taste and adjust salt.","Serve over basmati rice with cilantro and warm naan."]},{"id":21,"title":"TikTok Spaghetti","source":"cheerfulcook.com","url":"https://cheerfulcook.com/tiktok-spaghetti/","category":"Pasta","cookMethod":["Oven"],"servings":"8","totalTime":"30 min","ingredients":["16 oz spaghetti","1 lb lean ground beef","1 jar (24 oz) marinara sauce","1 jar (15 oz) Alfredo sauce","16 oz mozzarella cheese, shredded","1/4 cup grated Parmesan cheese"],"instructions":["Preheat oven to 375°F.","Boil spaghetti to al dente per package instructions. Drain.","Brown ground beef in skillet over medium heat until no longer pink. Drain fat.","Mix marinara sauce into beef. Simmer 5 minutes.","In a 9x13 baking dish, layer half the spaghetti, then half the marinara-beef mix.","Pour half the Alfredo sauce evenly over.","Sprinkle half the mozzarella and half the Parmesan.","Repeat layers with remaining spaghetti, beef mix, Alfredo, and cheeses.","Bake 20-25 minutes until cheese is melted and golden."]},{"id":22,"title":"Charro Beans","source":"therecipecritic.com","url":"https://therecipecritic.com/charro-beans/","category":"Sides","cookMethod":["Stovetop"],"servings":"8","totalTime":"35 min","ingredients":["8 slices thick cut bacon, diced","1 yellow onion, minced","2 jalapeños, seeded and diced","3 cloves garlic, minced","1 cup cubed ham","2 (15 oz) cans pinto beans, drained but not rinsed","1 (15 oz) can Mexican-style diced tomatoes","1 cup chicken broth","2 tsp ground cumin","2 tbsp brown sugar","1 tsp oregano","2 tsp paprika","1 tsp salt","1/2 tsp pepper","Cilantro and lime for garnish"],"instructions":["In a medium pot, cook diced bacon until crisp. Remove bacon, drain on paper towel. Drain bacon fat from pot, reserving 3 tbsp in pot.","Add diced onion and jalapeños to bacon fat. Sauté over medium-high 3-4 min until onions are transparent.","Add garlic and cubed ham. Sauté 1 more minute.","Add bacon back in, plus beans, tomatoes, chicken broth, cumin, sugar, oregano, paprika, salt, and pepper.","Bring just to a boil, then reduce to low. Simmer 8-10 minutes, stirring occasionally.","Serve with fresh cilantro and lime."]},{"id":23,"title":"Butter Chicken","source":"Family recipe","url":"","category":"Chicken","cookMethod":["Stovetop"],"servings":"4","totalTime":"30 min","ingredients":["2-3 chicken breasts/thighs","1 jar butter chicken sauce","1-2 cups rice","Naan"],"instructions":["Make rice in rice cooker or Instant Pot.","Cube chicken and sauté until done.","Add sauce to chicken and simmer.","Serve over rice with naan."]},{"id":24,"title":"WP Tacos","source":"Family recipe","url":"","category":"Beef","cookMethod":["Stovetop"],"servings":"4","totalTime":"20 min","ingredients":["1 lb ground beef, pork, or turkey","2/3 cup water","1 packet taco seasoning","Tortillas","Shredded cheese","Refried beans"],"instructions":["Brown ground meat in a skillet.","Add taco seasoning and toast 1-2 minutes.","Add 2/3 cup water and simmer until mostly evaporated.","Serve with tortillas, cheese, toppings, and refried beans on the side."]},{"id":25,"title":"Steak Tacos","source":"Family recipe","url":"","category":"Beef","cookMethod":["Grill"],"servings":"4-6","totalTime":"2-24 hr (incl. marinade)","ingredients":["1-2 lbs steak of choice","1/2 cup fresh lime juice","1/4 cup orange juice","1/4 cup pineapple juice","1/4 cup olive oil","2 tbsp smoked paprika","1 tbsp apple cider vinegar","1 tbsp salt","1 tbsp pepper","2 tsp chili powder","1 tsp garlic powder","1 tsp onion powder","1 tsp dried Mexican oregano","1/2 tsp cumin","3 tbsp achiote paste","Tortillas","Diced onion","Fresh cilantro","Guacamole"],"instructions":["Whisk together lime juice, orange juice, pineapple juice, olive oil, smoked paprika, apple cider vinegar, salt, pepper, chili powder, garlic powder, onion powder, oregano, cumin, and achiote paste.","Marinate steak in mixture for 2-24 hours.","Grill steaks to your desired temperature.","Rest, slice, and serve on tortillas with diced onion, cilantro, and guacamole."]},{"id":26,"title":"Spaghetti","source":"Family recipe","url":"","category":"Pasta","cookMethod":["Stovetop"],"servings":"4-6","totalTime":"25 min","ingredients":["1 lb spaghetti noodles","1 jar Rao's or equivalent arrabbiata sauce","1 lb ground meat","Dash of Italian seasoning","Dash of garlic powder","Dash of onion powder","Dash of crushed red pepper","French, Italian, or garlic bread"],"instructions":["Boil noodles per package instructions, minus 2 minutes.","Brown ground meat and cook to temperature.","Add sauce and seasonings to meat. Simmer to mix flavors.","Drain noodles and add to sauce. Finish cooking together for 2 minutes.","Serve with bread."]},{"id":27,"title":"Taco Pasta","source":"Family recipe","url":"","category":"Pasta","cookMethod":["Stovetop"],"servings":"4-6","totalTime":"25 min","ingredients":["1 lb ground meat","2 packages shells and cheese","1 can Rotel","1 packet taco seasoning","2/3 cup water"],"instructions":["Cook shells and cheese according to package.","Brown ground meat in a skillet.","Add taco seasoning and toast 1-2 minutes.","Add 2/3 cup water and simmer until mostly evaporated.","Stir ground meat and Rotel into the finished shells and cheese. Serve."]},{"id":28,"title":"Hamburgers","source":"Family recipe","url":"","category":"Beef","cookMethod":["Grill"],"servings":"4","totalTime":"15 min","ingredients":["Hamburger buns","Hamburger patties","Onion","Pickles","Sliced cheese","Tomato","Lettuce"],"instructions":["Grill hamburger patties to your desired temperature. Add cheese for the last 1-2 minutes.","Toast buns if desired.","Assemble with onion, pickles, tomato, lettuce, and any other fixings."]},{"id":29,"title":"Fettuccine Alfredo","source":"Family recipe","url":"","category":"Pasta","cookMethod":["Stovetop"],"servings":"4","totalTime":"25 min","ingredients":["2-3 chicken breasts/thighs","1 jar Alfredo sauce","1 lb fettuccine noodles","Broccoli"],"instructions":["Boil pasta per package instructions, minus 2 minutes.","Cube chicken and sauté in a skillet until cooked through.","Add Alfredo sauce to chicken and simmer.","Cook broccoli (steam or sauté).","Drain pasta and add to the sauce. Continue simmering 2 minutes.","Stir in chopped broccoli and serve."]}];
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+// ----- Storage -----
+const Storage = {
+  _mem: {},
+  get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return this._mem[key] || null; } },
+  set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { this._mem[key] = val; } }
+};
+
+// ----- Migrate old plan format ({day:id} -> {day:[ids]}) -----
+function migratePlan(p) {
+  if (!p) return {};
+  const out = {};
+  for (const k of Object.keys(p)) {
+    const v = p[k];
+    if (Array.isArray(v)) out[k] = v.filter(x => typeof x === 'number');
+    else if (typeof v === 'number') out[k] = [v];
+  }
+  return out;
+}
+
+let state = {
+  tab: 'library',
+  search: '',
+  category: 'All',
+  plan: migratePlan(Storage.get('mealPlan')),
+  shopChecked: Storage.get('shopChecked2') || {},
+  shopView: Storage.get('shopView') || 'combined',
+};
+
+const savePlan = () => Storage.set('mealPlan', state.plan);
+const saveShop = () => Storage.set('shopChecked2', state.shopChecked);
+const saveView = () => Storage.set('shopView', state.shopView);
+
+// ----- Helpers -----
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const recipeById = id => RECIPES.find(r => r.id === id);
+const categories = ['All', ...Array.from(new Set(RECIPES.map(r => r.category))).sort()];
+const dayRecipes = i => (state.plan[i] || []).map(recipeById).filter(Boolean);
+const totalPlanned = () => Object.values(state.plan).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
+
+function getWeekDates() {
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day + 6) % 7));
+  return DAYS.map((_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
+}
+
+// ----- Ingredient parsing & combining -----
+const WORD_NUM = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, twelve:12 };
+const UNITS = [
+  { canon: 'lb', re: /^(lbs?|pounds?)\b\.?/i },
+  { canon: 'oz', re: /^(oz|ounces?)\b\.?/i },
+  { canon: 'cup', re: /^cups?\b\.?/i },
+  { canon: 'tbsp', re: /^(tbsp|T|tablespoons?)\b\.?/i },
+  { canon: 'tsp', re: /^(tsp|t|teaspoons?)\b\.?/i },
+  { canon: 'can', re: /^cans?\b\.?/i },
+  { canon: 'jar', re: /^jars?\b\.?/i },
+  { canon: 'packet', re: /^(packets?|packages?|pkg)\b\.?/i },
+  { canon: 'clove', re: /^cloves?\b\.?/i },
+  { canon: 'slice', re: /^slices?\b\.?/i },
+  { canon: 'strip', re: /^strips?\b\.?/i },
+  { canon: 'sprig', re: /^sprigs?\b\.?/i },
+  { canon: 'piece', re: /^pieces?\b\.?/i },
+  { canon: 'gallon', re: /^gallons?\b\.?/i },
+  { canon: 'quart', re: /^quarts?\b\.?/i },
+  { canon: 'pint', re: /^pints?\b\.?/i },
+  { canon: 'pinch', re: /^pinch(es)?\b\.?/i },
+  { canon: 'dash', re: /^dash(es)?\b\.?/i },
+  { canon: 'splash', re: /^splash(es)?\b\.?/i },
+  { canon: 'bottle', re: /^bottles?\b\.?/i },
+  { canon: 'rack', re: /^racks?\b\.?/i },
+  { canon: 'head', re: /^heads?\b\.?/i },
+];
+
+function parseQty(str) {
+  // Returns numeric value or null. Handles "1", "1.5", "1/2", "1 1/2", "2-3" (avg)
+  str = str.trim();
+  // Range like "2-3" -> use average
+  const range = str.match(/^(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)$/);
+  if (range) return (parseFloat(range[1]) + parseFloat(range[2])) / 2;
+  // Mixed fraction "1 1/2"
+  const mixed = str.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixed) return parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
+  // Simple fraction "1/2"
+  const frac = str.match(/^(\d+)\/(\d+)$/);
+  if (frac) return parseInt(frac[1]) / parseInt(frac[2]);
+  // Decimal/integer
+  const num = parseFloat(str);
+  return isNaN(num) ? null : num;
+}
+
+function formatQty(n) {
+  if (n == null) return '';
+  // Common fraction display
+  const fracMap = { 0.125: '1/8', 0.25: '1/4', 0.333: '1/3', 0.5: '1/2', 0.667: '2/3', 0.75: '3/4' };
+  const whole = Math.floor(n);
+  const frac = n - whole;
+  // Round to nearest 1/8
+  const eighths = Math.round(frac * 8);
+  if (eighths === 0) return String(whole);
+  if (eighths === 8) return String(whole + 1);
+  const fracStr = { 1: '1/8', 2: '1/4', 3: '3/8', 4: '1/2', 5: '5/8', 6: '3/4', 7: '7/8' }[eighths];
+  return whole > 0 ? whole + ' ' + fracStr : fracStr;
+}
+
+// Normalize an ingredient line into { qty, unit, item, key, raw }
+function parseIngredient(line) {
+  let s = line.trim();
+  const raw = line;
+
+  // Replace leading word number with digit
+  s = s.replace(/^(One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Twelve)\s+/i, m => {
+    const n = WORD_NUM[m.trim().toLowerCase()];
+    return n ? n + ' ' : m;
+  });
+
+  // Try to extract leading qty
+  let qty = null, rest = s;
+  const qtyMatch = s.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?(?:\s*-\s*\d+(?:\.\d+)?)?)\s*/);
+  if (qtyMatch) {
+    qty = parseQty(qtyMatch[1]);
+    rest = s.slice(qtyMatch[0].length).trim();
+  }
+
+  // Skip parenthetical right after qty (e.g., "1 (15 oz) can ...")
+  let parenthetical = null;
+  const parenMatch = rest.match(/^\(([^)]+)\)\s*/);
+  if (parenMatch) {
+    parenthetical = parenMatch[1].trim();
+    rest = rest.slice(parenMatch[0].length).trim();
+  }
+
+  // Try to match unit
+  let unit = null;
+  for (const u of UNITS) {
+    const m = rest.match(u.re);
+    if (m) {
+      unit = u.canon;
+      rest = rest.slice(m[0].length).trim();
+      break;
+    }
+  }
+
+  // Strip "of " if present
+  rest = rest.replace(/^of\s+/i, '');
+
+  // Item = rest, take only up to first comma (everything after comma is usually a modifier)
+  let item = rest.replace(/,.*/, '').trim();
+
+  // Strip trailing parenthetical comments
+  item = item.replace(/\s*\([^)]*\)\s*$/, '').trim();
+
+  // Fallback: if no qty/unit, treat whole line as opaque
+  if (qty == null && !unit) {
+    return { qty: null, unit: null, item: item || raw, key: raw.toLowerCase(), raw, parenthetical, opaque: true };
+  }
+
+  // If no item left, opaque
+  if (!item) {
+    return { qty, unit, item: raw, key: raw.toLowerCase(), raw, parenthetical, opaque: true };
+  }
+
+  const key = item.toLowerCase().replace(/\s+/g, ' ').trim() + '|' + (unit || '');
+  return { qty, unit, item, key, raw, parenthetical };
+}
+
+// Combine ingredients across recipes
+function combineIngredients(planned) {
+  // planned: [{day, recipe}]
+  const groups = new Map();
+  for (const p of planned) {
+    for (const ing of p.recipe.ingredients) {
+      const parsed = parseIngredient(ing);
+      const key = parsed.opaque ? '__op__:' + parsed.raw : parsed.key;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key, item: parsed.item, unit: parsed.unit, opaque: !!parsed.opaque,
+          totalQty: 0, count: 0, sources: [], rawLines: []
+        });
+      }
+      const g = groups.get(key);
+      if (parsed.qty != null) g.totalQty += parsed.qty;
+      g.count++;
+      g.sources.push({ day: p.day, recipe: p.recipe.title });
+      g.rawLines.push(parsed.raw);
+    }
+  }
+  // Format
+  const items = Array.from(groups.values()).map(g => {
+    let display;
+    if (g.opaque) {
+      display = g.count > 1 ? '(' + g.count + 'x) ' + g.item : g.item;
+    } else if (g.totalQty > 0) {
+      const qtyStr = formatQty(g.totalQty);
+      display = qtyStr + (g.unit ? ' ' + g.unit + (g.totalQty !== 1 && !['lb','oz','tbsp','tsp'].includes(g.unit) ? 's' : '') : '') + ' ' + g.item;
+    } else {
+      display = g.item;
+    }
+    return { ...g, display };
+  });
+  // Sort: meaningful items first, opaque last; alphabetize within group
+  items.sort((a, b) => {
+    if (a.opaque !== b.opaque) return a.opaque ? 1 : -1;
+    return a.item.localeCompare(b.item);
+  });
+  return items;
+}
+
+// ----- Tab switching -----
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    state.tab = btn.dataset.tab;
+    document.querySelectorAll('section[id^="tab-"]').forEach(s => s.style.display = 'none');
+    $('#tab-' + state.tab).style.display = 'block';
+    if (state.tab === 'shopping') renderShopping();
+    if (state.tab === 'week') renderWeek();
+  });
+});
+
+// ----- Library -----
+function renderChips() {
+  const c = $('#category-chips');
+  c.innerHTML = categories.map(cat =>
+    `<button class="chip ${state.category === cat ? 'active' : ''}" data-cat="${esc(cat)}">${esc(cat)}</button>`
+  ).join('');
+  c.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+    state.category = b.dataset.cat;
+    renderChips();
+    renderLibrary();
+  }));
+}
+
+function renderLibrary() {
+  const grid = $('#recipe-grid');
+  const q = state.search.trim().toLowerCase();
+  const filtered = RECIPES.filter(r => {
+    if (state.category !== 'All' && r.category !== state.category) return false;
+    if (!q) return true;
+    return r.title.toLowerCase().includes(q)
+      || r.source.toLowerCase().includes(q)
+      || r.ingredients.some(i => i.toLowerCase().includes(q));
+  });
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state"><h3>No recipes match</h3><p>Try clearing the filter or search.</p></div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(r => `
+    <div class="card" data-id="${r.id}">
+      <h3 class="card-title">${esc(r.title)}</h3>
+      <div class="card-meta">
+        <span>${esc(r.totalTime)}</span><span>•</span><span>Serves ${esc(r.servings)}</span>
+      </div>
+      <div class="tag-row">
+        <span class="tag">${esc(r.category)}</span>
+        ${r.cookMethod.map(m => `<span class="tag tag-method">${esc(m)}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => openRecipeModal(parseInt(c.dataset.id))));
+}
+
+$('#search').addEventListener('input', e => { state.search = e.target.value; renderLibrary(); });
+
+// ----- Week -----
+function renderWeek() {
+  const dates = getWeekDates();
+  const grid = $('#week-grid');
+  grid.innerHTML = DAYS.map((day, i) => {
+    const recipes = dayRecipes(i);
+    const date = dates[i];
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const recipesHtml = recipes.map((r, idx) => `
+      <div class="day-recipe">
+        <button class="day-remove" data-day="${i}" data-idx="${idx}" title="Remove">×</button>
+        <div class="day-recipe-title">${esc(r.title)}</div>
+        <div class="day-recipe-meta">${esc(r.totalTime)} · ${r.cookMethod.map(esc).join(', ')}</div>
+        <div class="day-actions">
+          <button class="day-action view-recipe" data-id="${r.id}">View steps</button>
+        </div>
+      </div>
+    `).join('');
+    return `
+      <div class="day" data-day="${i}">
+        <div class="day-header">
+          <span class="day-name">${day.slice(0,3)}</span>
+          <span class="day-date">${dateStr}</span>
+        </div>
+        <div class="day-content">
+          ${recipes.length === 0
+            ? `<div class="day-empty" data-day="${i}">+ Add recipe</div>`
+            : recipesHtml + `<button class="day-add-more" data-day="${i}">+ Add another</button>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.day-empty').forEach(e => e.addEventListener('click', () => openPicker(parseInt(e.dataset.day))));
+  grid.querySelectorAll('.day-add-more').forEach(e => e.addEventListener('click', () => openPicker(parseInt(e.dataset.day))));
+  grid.querySelectorAll('.view-recipe').forEach(e => e.addEventListener('click', ev => {
+    ev.stopPropagation(); openRecipeModal(parseInt(ev.target.dataset.id));
+  }));
+  grid.querySelectorAll('.day-remove').forEach(e => e.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const d = parseInt(ev.target.dataset.day);
+    const idx = parseInt(ev.target.dataset.idx);
+    if (state.plan[d]) {
+      state.plan[d].splice(idx, 1);
+      if (state.plan[d].length === 0) delete state.plan[d];
+    }
+    savePlan(); updateBadges(); renderWeek();
+  }));
+
+  const filledDays = Object.keys(state.plan).filter(k => state.plan[k] && state.plan[k].length).length;
+  const totalRecipes = totalPlanned();
+  $('#plan-status').textContent = filledDays === 0 ? '' : `${filledDays} of 7 days planned · ${totalRecipes} recipe${totalRecipes !== 1 ? 's' : ''}`;
+}
+
+$('#autofill-btn').addEventListener('click', () => {
+  const used = new Set();
+  Object.values(state.plan).forEach(arr => (arr || []).forEach(id => used.add(id)));
+  const pool = RECIPES.filter(r => !used.has(r.id));
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  for (let i = 0; i < 7; i++) {
+    if ((!state.plan[i] || state.plan[i].length === 0) && pool.length) {
+      state.plan[i] = [pool.shift().id];
+    }
+  }
+  savePlan(); updateBadges(); renderWeek();
+});
+
+$('#reroll-btn').addEventListener('click', () => {
+  if (!confirm('Reroll all 7 days with new recipes? (One per day)')) return;
+  state.plan = {};
+  const pool = [...RECIPES];
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  for (let i = 0; i < 7; i++) state.plan[i] = [pool[i].id];
+  savePlan(); updateBadges(); renderWeek();
+});
+
+$('#clear-week').addEventListener('click', () => {
+  if (!confirm('Clear all planned days?')) return;
+  state.plan = {}; state.shopChecked = {};
+  savePlan(); saveShop(); updateBadges(); renderWeek();
+});
+
+// ----- Picker -----
+function openPicker(dayIdx) {
+  const root = $('#modal-root');
+  const existing = new Set(state.plan[dayIdx] || []);
+  root.innerHTML = `
+    <div class="modal-overlay" id="picker-overlay">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 class="modal-title">Pick a recipe for ${DAYS[dayIdx]}</h2>
+          <button class="modal-close" id="picker-close">×</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" class="search" id="picker-search" placeholder="Filter recipes..." style="margin-bottom:10px">
+          <div class="picker-list" id="picker-list">
+            ${RECIPES.map(r => `
+              <div class="picker-item ${existing.has(r.id) ? 'already' : ''}" data-id="${r.id}" data-text="${esc((r.title + ' ' + r.category).toLowerCase())}">
+                <div>
+                  <div class="picker-item-title">${esc(r.title)}${existing.has(r.id) ? ' ✓' : ''}</div>
+                  <div class="picker-item-meta">${esc(r.category)} · ${esc(r.totalTime)} · serves ${esc(r.servings)}</div>
+                </div>
+                <span class="tag">${esc(r.cookMethod[0])}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const close = () => { root.innerHTML = ''; };
+  $('#picker-overlay').addEventListener('click', close);
+  $('#picker-close').addEventListener('click', close);
+  $('#picker-search').addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('#picker-list .picker-item').forEach(it => {
+      it.style.display = !q || it.dataset.text.includes(q) ? '' : 'none';
+    });
+  });
+  document.querySelectorAll('#picker-list .picker-item').forEach(it => {
+    it.addEventListener('click', () => {
+      const id = parseInt(it.dataset.id);
+      if (!state.plan[dayIdx]) state.plan[dayIdx] = [];
+      state.plan[dayIdx].push(id);
+      savePlan(); close(); updateBadges(); renderWeek();
+    });
+  });
+  $('#picker-search').focus();
+}
+
+// ----- Recipe modal -----
+function openRecipeModal(id) {
+  const r = recipeById(id);
+  if (!r) return;
+  const root = $('#modal-root');
+  root.innerHTML = `
+    <div class="modal-overlay" id="recipe-overlay">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">${esc(r.title)}</h2>
+            <div class="modal-meta">
+              <span>${esc(r.totalTime)}</span><span>·</span>
+              <span>Serves ${esc(r.servings)}</span><span>·</span>
+              <span>${r.cookMethod.map(esc).join(' + ')}</span>
+            </div>
+            ${r.url ? `<a class="source-link" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.source)} ↗</a>` : `<span class="source-link" style="cursor:default">${esc(r.source)}</span>`}
+          </div>
+          <button class="modal-close" id="recipe-close">×</button>
+        </div>
+        <div class="modal-body">
+          ${r.notes ? `<div class="notes-banner">⚠ ${esc(r.notes)}</div>` : ''}
+          <div class="modal-section">
+            <h3 class="modal-section-title">Ingredients (${r.ingredients.length})</h3>
+            <ul class="ingredient-list">${r.ingredients.map(i => `<li>• ${esc(i)}</li>`).join('')}</ul>
+          </div>
+          <div class="modal-section">
+            <h3 class="modal-section-title">Instructions</h3>
+            <ol class="instruction-list">${r.instructions.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const close = () => { root.innerHTML = ''; };
+  $('#recipe-overlay').addEventListener('click', close);
+  $('#recipe-close').addEventListener('click', close);
+}
+
+// ----- Shopping list -----
+function getPlannedFlat() {
+  const out = [];
+  Object.entries(state.plan).forEach(([d, ids]) => {
+    (ids || []).forEach(id => {
+      const r = recipeById(id);
+      if (r) out.push({ day: parseInt(d), recipe: r });
+    });
+  });
+  return out.sort((a, b) => a.day - b.day);
+}
+
+function renderShopping() {
+  const c = $('#shopping-content');
+  const planned = getPlannedFlat();
+  if (!planned.length) {
+    c.innerHTML = `
+      <div class="shop-empty">
+        <h3 style="color:var(--text);margin:0 0 8px">No meals planned yet</h3>
+        <p style="margin:0">Head to the <strong>This Week</strong> tab to plan your meals — your shopping list will build itself here.</p>
+      </div>`;
+    return;
+  }
+
+  const combined = combineIngredients(planned);
+  const totalLines = state.shopView === 'combined' ? combined.length : planned.reduce((s, p) => s + p.recipe.ingredients.length, 0);
+  let checkedCount = 0;
+  if (state.shopView === 'combined') {
+    combined.forEach(g => { if (state.shopChecked['c:' + g.key]) checkedCount++; });
+  } else {
+    planned.forEach(p => p.recipe.ingredients.forEach((_, i) => { if (state.shopChecked[p.day + '_' + p.recipe.id + '_' + i]) checkedCount++; }));
+  }
+
+  c.innerHTML = `
+    <div class="shop-summary">
+      <div class="shop-stat"><strong>${planned.length}</strong>recipe${planned.length !== 1 ? 's' : ''}</div>
+      <div class="shop-stat"><strong>${totalLines}</strong>${state.shopView === 'combined' ? 'unique items' : 'lines'}</div>
+      <div class="shop-stat"><strong>${totalLines - checkedCount}</strong>still to buy</div>
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+        <div class="shop-toggle">
+          <button data-view="combined" class="${state.shopView === 'combined' ? 'active' : ''}">Combined</button>
+          <button data-view="byrecipe" class="${state.shopView === 'byrecipe' ? 'active' : ''}">By recipe</button>
+        </div>
+        <button class="btn btn-primary btn-sm" id="export-btn">Copy / Export</button>
+        <button class="btn btn-sm" id="reset-shop">Uncheck all</button>
+      </div>
+    </div>
+    <div id="shop-body">${state.shopView === 'combined' ? renderCombined(combined) : renderByRecipe(planned)}</div>
+  `;
+
+  document.querySelectorAll('.shop-toggle button').forEach(b => b.addEventListener('click', () => {
+    state.shopView = b.dataset.view; saveView(); renderShopping();
+  }));
+  $('#export-btn').addEventListener('click', () => openExport(combined, planned));
+  $('#reset-shop').addEventListener('click', () => { state.shopChecked = {}; saveShop(); renderShopping(); });
+  attachShopHandlers();
+}
+
+function renderCombined(combined) {
+  return `
+    <div class="shop-section">
+      <div class="shop-section-header">
+        <h3 class="shop-section-title">Combined shopping list</h3>
+        <span class="shop-section-day">${combined.length} unique items</span>
+      </div>
+      <ul class="shop-list">
+        ${combined.map(g => {
+          const key = 'c:' + g.key;
+          const checked = !!state.shopChecked[key];
+          const sources = Array.from(new Set(g.sources.map(s => s.recipe))).join(', ');
+          return `<li class="shop-item ${checked ? 'checked' : ''}" data-key="${esc(key)}">
+            <input type="checkbox" ${checked ? 'checked' : ''}>
+            <div class="shop-item-content">
+              <div class="shop-item-line">${esc(g.display)}</div>
+              <div class="shop-item-from">from: ${esc(sources)}</div>
+            </div>
+          </li>`;
+        }).join('')}
+      </ul>
+    </div>`;
+}
+
+function renderByRecipe(planned) {
+  return planned.map(p => `
+    <div class="shop-section">
+      <div class="shop-section-header">
+        <div>
+          <span class="shop-section-day">${DAYS[p.day]}</span>
+          <h3 class="shop-section-title">${esc(p.recipe.title)}</h3>
+        </div>
+        <button class="btn btn-sm view-recipe-shop" data-id="${p.recipe.id}">View recipe</button>
+      </div>
+      <ul class="shop-list">
+        ${p.recipe.ingredients.map((ing, i) => {
+          const key = p.day + '_' + p.recipe.id + '_' + i;
+          const checked = !!state.shopChecked[key];
+          return `<li class="shop-item ${checked ? 'checked' : ''}" data-key="${esc(key)}">
+            <input type="checkbox" ${checked ? 'checked' : ''}>
+            <div class="shop-item-content"><div class="shop-item-line">${esc(ing)}</div></div>
+          </li>`;
+        }).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+function attachShopHandlers() {
+  document.querySelectorAll('.shop-item').forEach(li => {
+    li.addEventListener('click', e => {
+      const key = li.dataset.key;
+      const cb = li.querySelector('input');
+      if (e.target.tagName !== 'INPUT') cb.checked = !cb.checked;
+      if (cb.checked) state.shopChecked[key] = true; else delete state.shopChecked[key];
+      saveShop();
+      li.classList.toggle('checked', cb.checked);
+      const total = document.querySelectorAll('.shop-item').length;
+      const remaining = total - document.querySelectorAll('.shop-item.checked').length;
+      const stats = document.querySelectorAll('.shop-stat strong');
+      if (stats[2]) stats[2].textContent = remaining;
+    });
+  });
+  document.querySelectorAll('.view-recipe-shop').forEach(b => {
+    b.addEventListener('click', () => openRecipeModal(parseInt(b.dataset.id)));
+  });
+}
+
+// ----- Export -----
+function buildExportText(combined, planned) {
+  const lines = [];
+  lines.push('SHOPPING LIST — ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+  lines.push('Planned: ' + planned.length + ' recipe' + (planned.length !== 1 ? 's' : '') + ' across ' + Object.keys(state.plan).filter(k => (state.plan[k]||[]).length).length + ' day' + (Object.keys(state.plan).length !== 1 ? 's' : ''));
+  lines.push('');
+  lines.push('— ITEMS —');
+  combined.forEach(g => {
+    lines.push('- ' + g.display);
+  });
+  lines.push('');
+  lines.push('— PLAN —');
+  Object.keys(state.plan).map(Number).sort((a,b)=>a-b).forEach(d => {
+    const ids = state.plan[d] || [];
+    if (!ids.length) return;
+    const names = ids.map(id => recipeById(id)?.title).filter(Boolean).join(', ');
+    lines.push(DAYS[d] + ': ' + names);
+  });
+  return lines.join('\n');
+}
+
+function buildExportLines(combined) {
+  return combined.map(g => g.display).join('\n');
+}
+
+function openExport(combined, planned) {
+  const fullText = buildExportText(combined, planned);
+  const itemsOnly = buildExportLines(combined);
+  const root = $('#modal-root');
+  root.innerHTML = `
+    <div class="modal-overlay" id="exp-overlay">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2 class="modal-title">Export shopping list</h2>
+          <button class="modal-close" id="exp-close">×</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:13px; color:var(--muted); margin:0 0 10px">Pick a format and copy. The "Items only" version pastes cleanly into most grocery sites.</p>
+          <div class="shop-toggle" style="margin-bottom:10px;">
+            <button class="active" data-fmt="items">Items only</button>
+            <button data-fmt="full">Full (with plan)</button>
+          </div>
+          <textarea class="export-textarea" id="exp-text" readonly></textarea>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="btn btn-primary" id="exp-copy">Copy to clipboard</button>
+            <button class="btn" id="exp-select">Select all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  const ta = $('#exp-text');
+  ta.value = itemsOnly;
+  const close = () => { root.innerHTML = ''; };
+  $('#exp-overlay').addEventListener('click', close);
+  $('#exp-close').addEventListener('click', close);
+  document.querySelectorAll('#exp-overlay .shop-toggle button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#exp-overlay .shop-toggle button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      ta.value = b.dataset.fmt === 'items' ? itemsOnly : fullText;
+    });
+  });
+  $('#exp-copy').addEventListener('click', async () => {
+    const text = ta.value;
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch (e) {
+      try { ta.select(); document.execCommand('copy'); ok = true; } catch (e2) { ok = false; }
+    }
+    showToast(ok ? '✓ Copied to clipboard' : 'Copy failed — use Select All + Cmd/Ctrl+C');
+  });
+  $('#exp-select').addEventListener('click', () => { ta.focus(); ta.select(); });
+}
+
+function showToast(msg) {
+  const old = document.querySelector('.toast'); if (old) old.remove();
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+// ----- Badges -----
+function updateBadges() {
+  const total = totalPlanned();
+  const wb = $('#week-count');
+  if (total > 0) { wb.textContent = total; wb.style.display = 'inline-block'; }
+  else wb.style.display = 'none';
+}
+
+// ----- Init -----
+renderChips();
+renderLibrary();
+updateBadges();
+</script>
+</body>
+</html>
